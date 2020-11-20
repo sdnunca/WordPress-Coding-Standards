@@ -11,8 +11,10 @@ namespace WordPressCS\WordPress\Helpers;
 
 use PHP_CodeSniffer\Files\File;
 use PHP_CodeSniffer\Util\Tokens;
+use PHPCSUtils\Utils\Conditions;
 use PHPCSUtils\Utils\Namespaces;
 use PHPCSUtils\Utils\ObjectDeclarations;
+use PHPCSUtils\Utils\Scopes;
 use WordPressCS\WordPress\Sniff as WPCS_Sniff;
 
 /**
@@ -79,7 +81,7 @@ trait IsUnitTestTrait {
 	 *
 	 * Unit test methods are identified as such:
 	 * - Method is within a known unit test class;
-	 * - or Method is within a class/trait which extends a known unit test class.
+	 * - or method is within a class/trait which extends a known unit test class/interface.
 	 *
 	 * @since 0.11.0
 	 * @since 1.1.0  Supports anonymous test classes and improved handling of nested scopes.
@@ -92,29 +94,19 @@ trait IsUnitTestTrait {
 	 */
 	protected function is_token_in_test_method( File $phpcsFile, $stackPtr ) {
 		// Is the token inside of a function definition ?
-		$functionToken = $phpcsFile->getCondition( $stackPtr, \T_FUNCTION );
+		$functionToken = Conditions::getLastCondition( $phpcsFile, $stackPtr, \T_FUNCTION );
 		if ( false === $functionToken ) {
 			// No conditions or no function condition.
 			return false;
 		}
 
-		$tokens     = $phpcsFile->getTokens();
-		$conditions = $tokens[ $stackPtr ]['conditions'];
-		foreach ( $conditions as $token => $condition ) {
-			if ( $token === $functionToken ) {
-				// Only examine the conditions the function is nested in, not those nested within the function.
-				break;
-			}
-
-			if ( isset( Tokens::$ooScopeTokens[ $condition ] ) ) {
-				$is_test_class = $this->is_test_class( $phpcsFile, $token );
-				if ( true === $is_test_class ) {
-					return true;
-				}
-			}
+		$ooPtr = Scopes::validDirectScope( $phpcsFile, $stackPtr, Tokens::$ooScopeTokens );
+		if ( false === $ooPtr ) {
+			// Not a method, global function.
+			return false;
 		}
 
-		return false;
+		return $this->is_test_class( $phpcsFile, $ooPtr );
 	}
 
 	/**
