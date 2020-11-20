@@ -12,6 +12,7 @@ namespace WordPressCS\WordPress\Helpers;
 use PHP_CodeSniffer\Files\File;
 use PHP_CodeSniffer\Util\Tokens;
 use PHPCSUtils\Utils\Namespaces;
+use PHPCSUtils\Utils\ObjectDeclarations;
 use WordPressCS\WordPress\Sniff as WPCS_Sniff;
 
 /**
@@ -157,7 +158,7 @@ trait IsUnitTestTrait {
 
 		// Is the class/trait one of the whitelisted test classes ?
 		$namespace = Namespaces::determineNamespace( $phpcsFile, $stackPtr );
-		$className = $phpcsFile->getDeclarationName( $stackPtr );
+		$className = ObjectDeclarations::getName( $phpcsFile, $stackPtr );
 		if ( '' !== $namespace ) {
 			if ( isset( $whitelist[ $namespace . '\\' . $className ] ) ) {
 				return true;
@@ -167,7 +168,7 @@ trait IsUnitTestTrait {
 		}
 
 		// Does the class/trait extend one of the whitelisted test classes ?
-		$extendedClassName = $phpcsFile->findExtendedClassName( $stackPtr );
+		$extendedClassName = ObjectDeclarations::findExtendedClassName( $phpcsFile, $stackPtr );
 		if ( false === $extendedClassName ) {
 			return false;
 		}
